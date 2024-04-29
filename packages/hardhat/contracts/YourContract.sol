@@ -5,81 +5,75 @@ pragma solidity >=0.8.0 <0.9.0;
 import "hardhat/console.sol";
 
 // Use openzeppelin to inherit battle-tested implementations (ERC20, ERC721, etc)
-// import "@openzeppelin/contracts/access/Ownable.sol";
+import "@openzeppelin/contracts/access/Ownable.sol";
+import "@openzeppelin/contracts/token/ERC721/ERC721.sol";
+import "@openzeppelin/contracts/token/ERC721/extensions/ERC721Enumerable.sol";
+import "@openzeppelin/contracts/utils/Counters.sol";
+import "@openzeppelin/contracts/utils/Base64.sol";
+import "@openzeppelin/contracts/utils/Strings.sol";
 
 /**
  * A smart contract that allows changing a state variable of the contract and tracking the changes
  * It also allows the owner to withdraw the Ether in the contract
  * @author BuidlGuidl
  */
-contract YourContract {
+contract YourContract is Ownable, ERC721Enumerable {
 	// State Variables
-	address public immutable owner;
-	string public greeting = "Building Unstoppable Apps!!!";
-	bool public premium = false;
-	uint256 public totalCounter = 0;
-	mapping(address => uint) public userGreetingCounter;
+	string private _baseTokenURI;
+	using Counters for Counters.Counter;
+	Counters.Counter private _tokenIds;
 
-	// Events: a way to emit log statements from smart contract that can be listened to by external parties
-	event GreetingChange(
-		address indexed greetingSetter,
-		string newGreeting,
-		bool premium,
-		uint256 value
-	);
-
-	// Constructor: Called once on contract deployment
-	// Check packages/hardhat/deploy/00_deploy_your_contract.ts
-	constructor(address _owner) {
-		owner = _owner;
+	function mintNFT() public payable {
+			require(msg.value == 0.0026 ether, "Incorrect amount");
+			_tokenIds.increment();
+			uint256 newTokenId = _tokenIds.current();
+			_mint(msg.sender, newTokenId);
+	}
+	constructor(string memory baseURI) ERC721("BURN", "BRN") {
+			_baseTokenURI = baseURI;
 	}
 
-	// Modifier: used to define a set of rules that must be met before or after a function is executed
-	// Check the withdraw() function
-	modifier isOwner() {
-		// msg.sender: predefined variable that represents address of the account that called the current function
-		require(msg.sender == owner, "Not the Owner");
-		_;
+	// Override the _baseURI function to return the base URI set in the constructor
+	function _baseURI() internal view override returns (string memory) {
+			return _baseTokenURI;
 	}
 
-	/**
-	 * Function that allows anyone to change the state variable "greeting" of the contract and increase the counters
-	 *
-	 * @param _newGreeting (string memory) - new greeting to save on the contract
-	 */
-	function setGreeting(string memory _newGreeting) public payable {
-		// Print data to the hardhat chain console. Remove when deploying to a live network.
-		console.log(
-			"Setting new greeting '%s' from %s",
-			_newGreeting,
-			msg.sender
-		);
+function tokenURI(uint256 tokenId) public view override returns (string memory) {
+    require(_exists(tokenId), "ERC721Metadata: URI query for nonexistent token");
 
-		// Change state variables
-		greeting = _newGreeting;
-		totalCounter += 1;
-		userGreetingCounter[msg.sender] += 1;
+    string memory svg = string(abi.encodePacked(
+        '<svg xmlns="http://www.w3.org/2000/svg" width="100" height="100">',
+        '<rect width="100" height="100" fill="blue"/>',
+        '<text x="10" y="20" class="small" fill="white">Token #',
+        Strings.toString(tokenId),
+        '</text></svg>'
+    ));
 
-		// msg.value: built-in global variable that represents the amount of ether sent with the transaction
-		if (msg.value > 0) {
-			premium = true;
-		} else {
-			premium = false;
-		}
+    string memory imageURI = string(abi.encodePacked(
+        'data:image/svg+xml;base64,',
+        Base64.encode(bytes(svg))
+    ));
 
-		// emit: keyword used to trigger an event
-		emit GreetingChange(msg.sender, _newGreeting, msg.value > 0, msg.value);
-	}
+    string memory json = Base64.encode(bytes(string(abi.encodePacked(
+        '{"name": "Token #', 
+        Strings.toString(tokenId), 
+        '", "description": "A dynamically generated NFT", "image": "', 
+        imageURI, 
+        '"}'
+    ))));
 
-	/**
-	 * Function that allows the owner to withdraw all the Ether in the contract
-	 * The function can only be called by the owner of the contract as defined by the isOwner modifier
-	 */
-	function withdraw() public isOwner {
-		(bool success, ) = owner.call{ value: address(this).balance }("");
-		require(success, "Failed to send Ether");
-	}
+    string memory output = string(abi.encodePacked(
+        'data:application/json;base64,', 
+        json
+    ));
 
+    return output;
+}
+
+    // Override _burn to handle token burning
+    function _burn(uint256 tokenId) internal override {
+        super._burn(tokenId);
+    }
 	/**
 	 * Function that allows the contract to receive ETH
 	 */

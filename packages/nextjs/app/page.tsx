@@ -2,12 +2,95 @@
 
 import Link from "next/link";
 import type { NextPage } from "next";
+import { useState, useEffect } from "react";
 import { useAccount } from "wagmi";
 import { BugAntIcon, MagnifyingGlassIcon } from "@heroicons/react/24/outline";
 import { Address } from "~~/components/scaffold-eth";
+import { useScaffoldReadContract } from "~~/hooks/scaffold-eth";
+import { connect } from "http2";
+import Base64 from "base64-js";
 
 const Home: NextPage = () => {
-  const { address: connectedAddress } = useAccount();
+    const { address: connectedAddress } = useAccount();
+    // const [imageSrc, setImageSrc] = useState('');
+    // const [nftJson, setNFTJson] = useState({});
+
+    const [imageSrc, setImageSrc] = useState('');
+    const [decodedJson, setDecodedJson] = useState('');
+  
+    // useEffect(() => {
+    //   const fetchData = async () => {
+    //     const { data: nftID } = await useScaffoldReadContract({
+    //       contractName: "YourContract",
+    //       functionName: "tokenOfOwnerByIndex",
+    //       args: [connectedAddress, 0],
+    //     });
+  
+    //     const { data: encodedJson } = await useScaffoldReadContract({
+    //       contractName: "YourContract",
+    //       functionName: "tokenURI",
+    //       args: [nftID],
+    //     });
+  
+    //     const decodedJson = Base64.decode(encodedJson);
+    //     const json = JSON.parse(decodedJson);
+    //     setImageSrc(json.image);
+    //   };
+  
+    //   fetchData();
+    // }, [connectedAddress]);
+
+    // useEffect(() => {
+      
+    // }, [connectedAddress])
+  
+    const { data: nftID, isLoading: isNFTIDLoading } = useScaffoldReadContract({
+      contractName: "YourContract",
+      functionName: "tokenOfOwnerByIndex",
+      args: [connectedAddress, BigInt(0)],
+    });
+  
+    const { data: nftMeta, isLoading: isNFTMetaLoading } = useScaffoldReadContract({
+      contractName: "YourContract",
+      functionName: "tokenURI",
+      args: [nftID],
+    });
+
+
+    console.log(nftID, nftMeta);
+
+    // console.log("base64 byte length", Base64.byteLength(nftMeta));
+
+    useEffect(() => {
+      if(nftMeta) {
+        const base64String = nftMeta.split(',')[1]; // Split the string and take the part after the comma
+        const decodedJson = window.atob(base64String);
+        const json = JSON.parse(decodedJson);
+        setImageSrc(json.image); // Directly use the image data URI
+        setDecodedJson(JSON.stringify(json, null, 2)); // Pretty print JSON
+      }
+    }, [nftMeta])
+
+
+  // const NFTInfo = () => {
+  //   const { data: nftID, isLoading: isNFTIDLoading } = useScaffoldReadContract({
+  //     contractName: "YourContract",
+  //     functionName: "tokenOfOwnerByIndex",
+  //     // @ts-ignore
+  //     args: [connectedAddress, 0],
+  //   });
+
+  //   const { data: nftInfo, isLoading: isNFTInfoLoading } = useScaffoldReadContract({
+  //     contractName: "YourContract",
+  //     functionName: "tokenURI",
+  //     args: [nftID],
+  //   });
+
+  //   return { nftInfo, nftID, isNFTInfoLoading };
+  // };
+
+  // console.log(NFTInfo().isNFTInfoLoading, NFTInfo().nftInfo);
+  console.log(decodedJson);
 
   return (
     <>
@@ -20,6 +103,9 @@ const Home: NextPage = () => {
           <div className="flex justify-center items-center space-x-2">
             <p className="my-2 font-medium">Connected Address:</p>
             <Address address={connectedAddress} />
+          </div>
+          <div className="flex justify-center items-center space-x-2">
+            <img src={imageSrc} alt="NFT" className="w-1/2 h-1/2" />
           </div>
           <p className="text-center text-lg">
             Get started by editing{" "}
