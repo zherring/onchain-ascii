@@ -24,11 +24,12 @@ contract YourContract is Ownable, ERC721Enumerable {
 	Counters.Counter private _tokenIds;
 
 	function mintNFT() public payable {
-			require(msg.value == 0.0026 ether, "Incorrect amount");
+			// require(msg.value == 0.0026 ether, "Incorrect amount");
 			_tokenIds.increment();
 			uint256 newTokenId = _tokenIds.current();
 			_mint(msg.sender, newTokenId);
 	}
+	
 	constructor(string memory baseURI) ERC721("BURN", "BRN") {
 			_baseTokenURI = baseURI;
 	}
@@ -43,10 +44,19 @@ function tokenURI(uint256 tokenId) public view override returns (string memory) 
 
     string memory svg = string(abi.encodePacked(
         '<svg xmlns="http://www.w3.org/2000/svg" width="100" height="100">',
+				// '<style>.rotate { animation: rotation 5s infinite linear; }',
+        // '@keyframes rotation { from { transform: rotate(0deg) translate(50px, 50px); }',
+        // 'to { transform: rotate(360deg) translate(50px, 50px); } }</style>',
+        // '<rect x="-25" y="-25" width="50" height="50" fill="gray" class="rotate"/>',
         '<rect width="100" height="100" fill="blue"/>',
         '<text x="10" y="20" class="small" fill="white">Token #',
         Strings.toString(tokenId),
-        '</text></svg>'
+        '</text>',
+				
+				'<rect x="25" y="25" width="50" height="50" fill="gray" class="rotate">',
+        '<animateTransform attributeName="transform" type="rotate" from="0 50 50" to="360 50 50" dur="5s" repeatCount="indefinite"/>',
+        '</rect>',
+				'</svg>'
     ));
 
     string memory imageURI = string(abi.encodePacked(
